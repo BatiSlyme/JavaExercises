@@ -1,9 +1,10 @@
-package ReadFromFile;
+package Sirma;
 
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
@@ -12,13 +13,15 @@ import java.util.Date;
 import java.util.Scanner;
 
 public class Main {
-
     public static void main(String[] args) throws FileNotFoundException {
         Scanner sc = new Scanner(new BufferedReader(new FileReader("SirmaReadFromText.txt")));
         BufferedReader buffer = new BufferedReader(new FileReader("SirmaReadFromText.txt"));
 //      count how many rows we have
         int count = 0;
         String line1;
+        String employee1 = "";
+        String employee2 = "";
+        long longestCollaboration = 0;
         try {
             while ((line1 = buffer.readLine()) != null) {
                 count++;
@@ -29,7 +32,7 @@ public class Main {
             e.printStackTrace();
 
         }
-        int[] dates = new int[count];
+
         int rows = count;
         int columns = 4;
         String[][] myArray = new String[rows][columns];
@@ -41,166 +44,108 @@ public class Main {
                 }
             }
         }
-        System.out.println(Arrays.deepToString(myArray));
-        System.out.println(myArray[1][2]);
-        Arrays.sort(myArray, (a, b) -> a[1].compareTo(b[1]));//sort by ProjectID
-        System.out.println(Arrays.deepToString(myArray));
 
-
-        calculateDate(myArray, dates, count);
-        getMaxDate(dates);
-    }
-
-    public static int[] calculateDate(String[][] arr, int[] dates, int count) {
-        String inputString1 = "2021-01-23";
-        String inputString2 = "2021-04-27";
-        Date date = new Date();
-        String currentDate = new SimpleDateFormat("yyyy-MM-dd").format(date);
-        long diffDays = 0;
-        for (int i = 0; i < count - 1; i++) {
-            String dateFrom = arr[i][2];
-            String dateTo = arr[i][3];
-            if ((arr[i][3]).equals("NULL"))
-                dateTo = currentDate;
-            LocalDate dt1 = LocalDate.parse(dateFrom);
-            LocalDate dt2 = LocalDate.parse(dateTo);
-            diffDays = ChronoUnit.DAYS.between(dt1, dt2);
-            dates[i] = (int) diffDays;
-        }
-
-
-        return dates;
-    }
-
-    public static int getMaxDate(int[] dates) {
-        int max = Integer.MIN_VALUE;
-
-        for (int i = 0; i < dates.length; i++) {
-            int value = dates[i];
-
-            if (value > max) {
-                max = value;
-            }
-
-        }
-        return max;
-    }
-
-    public static void projectLegnth(String[][] arr, int count) {
-//        int projects=0;
-//        for (int i=1;i<count;i++){
-//            if (arr[i-1][1]==arr[i][1]){
-//                projects++;
-//            }else
-//                projects=1;
-        int[] result = new int[count];
-        int counter = 0, repeats = 0;
         for (int i = 0; i < count; i++) {
-            boolean isDistinct = false;
-            for (int j = 0; j < i; j++) {
-                if (arr[i][1] == arr[j][1]) {
-                    isDistinct = true;
-                    break;
+            for (int j = 1; j <count; j++) {
+                if (calculateDuration(myArray, i, j) > longestCollaboration) {
+                    longestCollaboration = calculateDuration(myArray, i, j);
+                    employee1 = myArray[i][0];
+                    employee2 = myArray[j][0];
+
                 }
             }
-            if (!isDistinct) {
-                result[counter++] = Integer.parseInt(arr[i][1]);
+        }
+        System.out.println("The partners who have worked together for the longest time on a project are: " + employee1 + " and " + employee2);
+
+
+    }
+
+    /**
+     * Find how long the employees have worked together
+     *
+     * @param arr       the array containing the txt file information
+     * @param employee1 employee 1
+     * @param employee2 employee 2
+     * @return return the duration of the 2 employees who have worked together in ms
+     */
+
+    public static long calculateDuration(String[][] arr, int employee1, int employee2) {
+        if (!hasCollaborated(arr, employee1, employee2))
+            return 0;// have't collaborated so we don't calculate the duration of the work together
+
+        long dates = 0;
+        long lowerThreshold = 0;
+        long upperThreshold = 0;
+        SimpleDateFormat myFormat = new SimpleDateFormat("yyyy-MM-dd");
+        try {
+            Date startDate1 = myFormat.parse(arr[employee1][2]);
+            Date endDate1 = myFormat.parse(arr[employee1][3]);
+
+            Date startDate2 = myFormat.parse(arr[employee2][2]);
+            Date endDate2 = myFormat.parse(arr[employee2][3]);
+            if (startDate1.getTime() - startDate2.getTime() < 0) {
+                lowerThreshold = startDate2.getTime();
+            } else
+                lowerThreshold = startDate1.getTime();
+
+            if (endDate1.getTime() - endDate2.getTime() < 0) {
+                upperThreshold = endDate1.getTime();
+            } else
+                upperThreshold = endDate2.getTime();
+
+            dates = upperThreshold - lowerThreshold;
+
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
+
+
+        return dates;// return in milliseconds
+    }
+
+    /**
+     * Finds which employees have worked together
+     *
+     * @param arr       the array containing the txt file information
+     * @param employee1 employee 1
+     * @param employee2 employee 2
+     * @return true or false
+     */
+    public static boolean hasCollaborated(String[][] arr, int employee1, int employee2) {
+        if (!(arr[employee1][1]).equals(arr[employee2][1]) || arr[employee1][0].equals(arr[employee2][0])) {
+            return false;
+        }
+
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
+        Date date = new Date();//current date
+
+        if ((arr[employee1][3]).equals("NULL")) {
+            arr[employee1][3] = formatter.format(date);
+        }
+        if ((arr[employee2][3]).equals("NULL")) {
+            arr[employee2][3] = formatter.format(date);
+        }
+        String[] endDate1 = arr[employee1][3].split("-");
+        String[] startDate1 = arr[employee1][2].split("-");
+        String[] endDate2 = arr[employee2][3].split("-");
+        String[] startDate2 = arr[employee2][2].split("-");
+
+        if (((Integer.parseInt(endDate1[0]) - Integer.parseInt(startDate2[0]) < 0)) || ((Integer.parseInt(endDate2[0]) - Integer.parseInt(startDate1[0]) < 0))){
+            return false;
+        }
+         else if (Integer.parseInt(endDate1[0]) - Integer.parseInt(startDate2[0]) == 0) {
+            if (Integer.parseInt(endDate1[1]) - Integer.parseInt(startDate2[1]) < 0) {
+                return false;
+            } else if (Integer.parseInt(endDate1[1]) - Integer.parseInt(startDate2[2]) == 0) {
+                return Integer.parseInt(endDate1[2]) - Integer.parseInt(startDate2[2]) >= 0;
+            }
+        } else if (Integer.parseInt(endDate2[0]) - Integer.parseInt(startDate1[0]) == 0) {
+            if (Integer.parseInt(endDate2[1]) - Integer.parseInt(startDate1[1]) < 0) {
+                return false;
+            } else if (Integer.parseInt(endDate2[1]) - Integer.parseInt(startDate1[2]) == 0) {
+                return Integer.parseInt(endDate2[2]) - Integer.parseInt(startDate1[2]) >= 0;
             }
         }
-        for (int i = 0; i < counter; i++) {
-            count = 0;
-            for (int j = 0; j < arr.length; j++) {
-                if (result[i] == arr[j][1]) {
-                    count++;
-                }
-
-            }
-            System.out.println(result[i] + " = " + count);
-
-        }
+        return true;
     }
 }
-
-
-//    public static String[][] create2DIntMatrixFromFile(String filename) throws Exception {
-//        String[][] matrix = null;
-//
-//        // If included in an Eclipse project.
-////    InputStream stream = ClassLoader.getSystemResourceAsStream(filename);
-////    BufferedReader buffer = new BufferedReader(new InputStreamReader(stream));
-//
-//        // If in the same directory - Probably in your case...
-//        // Just comment out the 2 lines above this and uncomment the line
-//        // that follows.
-//        BufferedReader buffer = new BufferedReader(new FileReader(filename));
-//
-//        String line;
-//        int row = 0;
-//        int size = 0;
-//
-//        while ((line = buffer.readLine()) != null) {
-//            String[] vals = line.trim().split(", ");
-//
-//            // Lazy instantiation.
-//            if (matrix == null) {
-//                size = vals.length;
-//                matrix = new String[size][size];
-//            }
-//
-//            for (int col = 0; col < size; col++) {
-//                matrix[row][col] = vals[col];
-//            }
-//
-//            row++;
-//        }
-//
-//        return matrix;
-//    }
-//
-//    public static void printMatrix(String[][] matrix) {
-//        String str = "";
-//        int size = matrix.length;
-//
-//        if (matrix != null) {
-//            for (int row = 0; row < size; row++) {
-//                str += " ";
-//                for (int col = 0; col < size; col++) {
-//                    str += (matrix[row][col]);
-//                    if (col < size - 1) {
-//                        str += " | ";
-//                    }
-//                }
-//                if (row < size - 1) {
-//                    str += "\n";
-//                }
-////                    for (int col = 0; col < size; col++) {
-////                        for (int i = 0; i < 4; i++) {
-//////                            str += "-";
-////                        }
-////                        if (col < size - 1) {
-//////                            str += "+";
-////                        }
-////                    }
-////                    str += "\n";
-////                } else {
-////                    str += "\n";
-////                }
-//            }
-//        }
-//
-//        System.out.println(str);
-//    }
-//
-//    public static void main(String[] args) {
-//        String[][] matrix = null;
-//
-//        try {
-//            matrix = create2DIntMatrixFromFile("SirmaReadFromText.txt");
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//        }
-//
-//        printMatrix(matrix);
-//    }
-
-
